@@ -5,26 +5,34 @@ import java.io.IOException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.jaudiotagger.audio.AudioFile;
 import org.jaudiotagger.audio.AudioFileIO;
 import org.jaudiotagger.audio.exceptions.CannotWriteException;
+import org.jaudiotagger.audio.mp3.MP3File;
 import org.jaudiotagger.tag.FieldDataInvalidException;
 import org.jaudiotagger.tag.FieldKey;
 import org.jaudiotagger.tag.KeyNotFoundException;
 import org.jaudiotagger.tag.Tag;
+import org.jaudiotagger.tag.id3.AbstractID3v2Tag;
+import org.jaudiotagger.tag.id3.ID3v23Tag;
+import org.jaudiotagger.tag.id3.ID3v24Tag;
 
 public class ListItem {
 	private File file;
-	AudioFile mp3file;
+	MP3File mp3file;
+	ID3v23Tag tag;
 	boolean isDirty = false;
 	
 	public ListItem(File file) throws IOException {
 		this.file = file;
 		try {
-			this.mp3file = AudioFileIO.read(file);
+			this.mp3file = (MP3File)AudioFileIO.read(file);
+			ID3v24Tag tag24 = mp3file.getID3v2TagAsv24();
+			this.tag = new ID3v23Tag(tag24);
+			mp3file.setID3v2Tag(this.tag);
 		} catch (Exception e) {
 			e.printStackTrace();
 			this.mp3file = null;
+			this.tag = null;
 		}
 	}
 
@@ -38,17 +46,14 @@ public class ListItem {
 	}
 
 	public String getAlbum() {
-		Tag tag = mp3file.getTag();
 		return convert(tag.getFirst(FieldKey.ALBUM));
 	}
 
 	public String getTitle() {
-		Tag tag = mp3file.getTag();
 		return convert(tag.getFirst(FieldKey.TITLE));
 	}
 
 	public String getArtist() {
-		Tag tag = mp3file.getTag();
 		return convert(tag.getFirst(FieldKey.ARTIST));
 	}
 	
@@ -58,7 +63,6 @@ public class ListItem {
 
 	private void setMetadata(FieldKey key, String value) {
 		try {
-			Tag tag = mp3file.getTag();
 			tag.setField(key, value);
 		} catch (KeyNotFoundException e) {
 			e.printStackTrace();

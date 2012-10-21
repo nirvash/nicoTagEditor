@@ -415,7 +415,9 @@ public class mainPanel extends JFrame {
 						listItem.analyzeTag();
 					}
 					ListItem current = (ListItem)jFileList.getSelectedValue();
-					updateTagItems(current);
+					if (current != null) {
+						updateTagItems(current);
+					}
 				}
 			});
 		}
