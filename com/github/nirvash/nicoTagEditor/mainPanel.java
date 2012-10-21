@@ -3,14 +3,26 @@ package com.github.nirvash.nicoTagEditor;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.StringWriter;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 import javax.swing.BoxLayout;
 import javax.swing.DefaultListModel;
 import javax.swing.DropMode;
+import javax.swing.GroupLayout;
 import javax.swing.JButton;
+import javax.swing.JEditorPane;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JList;
@@ -22,10 +34,11 @@ import javax.swing.ListSelectionModel;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 
-import org.dyno.visual.swing.layouts.Bilateral;
-import org.dyno.visual.swing.layouts.Constraints;
-import org.dyno.visual.swing.layouts.GroupLayout;
-import org.dyno.visual.swing.layouts.Leading;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
+
 
 import com.github.nirvash.nicoTagEditor.ItemSelectionListener.viewUpdateListener;
 
@@ -38,6 +51,26 @@ public class mainPanel extends JFrame {
 			getJTextFieldAlbum().setText(item.getAlbum());
 			getJTextFieldTitle().setText(item.getTitle());
 			getJTextFieldArtist().setText(item.getArtist());
+			String url = item.getUrl();
+			if (url != null) {
+				try {
+					Document document = Jsoup.connect(url).get();
+					/*
+					File f = new File("tmp.txt");
+					FileWriter w = new FileWriter(f);
+					w.write(document.outerHtml());
+					w.flush(); w.close();
+					*/
+					
+					Elements descs = document.select("p[itemprop*=description");
+					Element desc = descs.first();
+					String body = desc.html();
+					getJEditorPane().setContentType("text/html");
+					getJEditorPane().setText(body);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
 		}
 
 		@Override
@@ -53,11 +86,11 @@ public class mainPanel extends JFrame {
 
 	
 	private JSplitPane jSplitPane0;
-	private JPanel jPanel1;
+	private JPanel jPanelList;
 	private JButton jButton0;
-	private JPanel jPanel3;
-	private JList jList0;
-	private JScrollPane jScrollPane0;	
+	private JPanel jListButtonPanel;
+	private JList jFileList;
+	private JScrollPane jScrollPaneFileList;	
 	private ItemSelectionListener itemSelectionListener;
 
 	private JPanel jPanelTagEdit;
@@ -67,7 +100,10 @@ public class mainPanel extends JFrame {
 	private JLabel jLabelArtist;
 	private JTextField jTextFieldAlbum;
 	private JTextField jTextFieldTitle;
-	private JTextField jTextFieldArtist;	
+	private JTextField jTextFieldArtist;
+	
+	private JScrollPane jScrollPaneHtml;
+	private JEditorPane jEditorPane;
 
 	private static final String PREFERRED_LOOK_AND_FEEL = "com.sun.java.swing.plaf.nimbus.NimbusLookAndFeel";
 	static {
@@ -83,6 +119,33 @@ public class mainPanel extends JFrame {
 		setSize(750, 272);
 	}
 	
+	private JEditorPane getJEditorPane() {
+		if (jEditorPane == null) {
+			jEditorPane = new JEditorPane();
+			jEditorPane.setEditable(false);
+//			jEditorPane.setPreferredSize(new Dimension(400, 100));
+		}
+		return jEditorPane;
+	}
+	
+	private JScrollPane getJScrollPaneHtml() {
+		if (jScrollPaneHtml == null) {
+			jScrollPaneHtml = new JScrollPane(getJEditorPane());
+			jScrollPaneHtml.setAutoscrolls(true);
+			
+			jScrollPaneHtml.addComponentListener(new ComponentAdapter() {
+                @Override
+                public void componentResized(ComponentEvent e) {
+                	jEditorPane.setSize(new Dimension(
+                			jScrollPaneHtml.getWidth()-20, 
+                			jScrollPaneHtml.getHeight()-20));
+                }
+			});	
+
+		}
+		return jScrollPaneHtml;
+	}
+	
 	private JTextField getJTextFieldAlbum() {
 		if (jTextFieldAlbum == null) {
 			jTextFieldAlbum = new JTextField();
@@ -91,7 +154,7 @@ public class mainPanel extends JFrame {
 			jTextFieldAlbum.addActionListener(new ActionListener() {
 				@Override
 				public void actionPerformed(ActionEvent e) {
-					ListItem listItem = (ListItem)jList0.getSelectedValue();
+					ListItem listItem = (ListItem)jFileList.getSelectedValue();
 					listItem.setAlbum(jTextFieldAlbum.getText());
 				}
 			});
@@ -107,7 +170,7 @@ public class mainPanel extends JFrame {
 			jTextFieldTitle.addActionListener(new ActionListener() {
 				@Override
 				public void actionPerformed(ActionEvent e) {
-					ListItem listItem = (ListItem)jList0.getSelectedValue();
+					ListItem listItem = (ListItem)jFileList.getSelectedValue();
 					listItem.setTitle(jTextFieldTitle.getText());
 				}
 			});
@@ -123,7 +186,7 @@ public class mainPanel extends JFrame {
 			jTextFieldArtist.addActionListener(new ActionListener() {
 				@Override
 				public void actionPerformed(ActionEvent e) {
-					ListItem listItem = (ListItem)jList0.getSelectedValue();
+					ListItem listItem = (ListItem)jFileList.getSelectedValue();
 					listItem.setArtist(jTextFieldArtist.getText());
 				}
 			});
@@ -159,41 +222,68 @@ public class mainPanel extends JFrame {
 	private JPanel getJPanelTagEdit() {
 		if (jPanelTagEdit == null) {
 			jPanelTagEdit = new JPanel();
-			jPanelTagEdit.setLayout(new GroupLayout());
-			jPanelTagEdit.add(getJLabelAlbum(), new Constraints(new Leading(12, 12, 12), new Leading(15, 10, 10)));
-			jPanelTagEdit.add(getJTextFieldAlbum(), new Constraints(new Bilateral(88, 9, 12), new Leading(9, 12, 12)));
-			jPanelTagEdit.add(getJLabelTitle(), new Constraints(new Leading(12, 12, 12), new Leading(52, 10, 10)));
-			jPanelTagEdit.add(getJTextFieldTitle(), new Constraints(new Bilateral(88, 9, 12), new Leading(46, 12, 12)));
-			jPanelTagEdit.add(getJLabelArtist(), new Constraints(new Leading(12, 12, 12), new Leading(91, 10, 10)));
-			jPanelTagEdit.add(getJTextFieldArtist(), new Constraints(new Bilateral(88, 9, 12), new Leading(85, 12, 12)));
+			GroupLayout layout = new GroupLayout(jPanelTagEdit);
+			jPanelTagEdit.setLayout(layout);
+			
+			layout.setAutoCreateGaps(true);
+			layout.setAutoCreateContainerGaps(true);
+			
+			layout.setHorizontalGroup(layout.createParallelGroup()
+					.addGroup(layout.createSequentialGroup()
+							.addGroup(layout.createParallelGroup(GroupLayout.Alignment.LEADING)
+									.addComponent(getJLabelAlbum())
+									.addComponent(getJLabelTitle())
+									.addComponent(getJLabelArtist())
+									)
+							.addGroup(layout.createParallelGroup(GroupLayout.Alignment.LEADING)
+									.addComponent(getJTextFieldAlbum())
+									.addComponent(getJTextFieldTitle())
+									.addComponent(getJTextFieldArtist())
+									)
+							)
+					.addComponent(getJScrollPaneHtml())
+				);
+			
+			layout.setVerticalGroup(layout.createSequentialGroup()
+					.addGroup(layout.createParallelGroup(GroupLayout.Alignment.BASELINE)
+							.addComponent(getJLabelAlbum())
+							.addComponent(getJTextFieldAlbum()))
+					.addGroup(layout.createParallelGroup(GroupLayout.Alignment.BASELINE)
+							.addComponent(getJLabelTitle())
+							.addComponent(getJTextFieldTitle()))
+					.addGroup(layout.createParallelGroup(GroupLayout.Alignment.BASELINE)
+							.addComponent(getJLabelArtist())
+							.addComponent(getJTextFieldArtist()))
+					.addComponent(getJScrollPaneHtml())
+				);
 		}
 		return jPanelTagEdit;
 	}
 
-	private JScrollPane getJScrollPane0() {
-		if (jScrollPane0 == null) {
-			jScrollPane0 = new JScrollPane();
-			jScrollPane0.setViewportView(getJList0());
+	private JScrollPane getJScrollPaneFileList() {
+		if (jScrollPaneFileList == null) {
+			jScrollPaneFileList = new JScrollPane();
+			jScrollPaneFileList.setViewportView(getJFileList());
 		}
-		return jScrollPane0;
+		return jScrollPaneFileList;
 	}
 
-	private JList getJList0() {
-		if (jList0 == null) {
-			jList0 = new JList();
+	private JList getJFileList() {
+		if (jFileList == null) {
+			jFileList = new JList();
 			DefaultListModel fileListModel = new DefaultListModel();
-			jList0 = new JList(fileListModel);
-		    jList0.setTransferHandler(new FileDropHandler(fileListModel));
-		    jList0.setCellRenderer(new FileRenderer());
-		    jList0.getSelectionModel().setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-		    jList0.setDropMode(DropMode.INSERT);
-		    jList0.setDragEnabled(true);
-		    jList0.setBackground(Color.WHITE);
-		    jList0.setSelectionBackground(new Color(200, 200, 255));
-		    jList0.addListSelectionListener(getItemSelectionListener(fileListModel));
-			jList0.setModel(fileListModel);
+			jFileList = new JList(fileListModel);
+		    jFileList.setTransferHandler(new FileDropHandler(fileListModel));
+		    jFileList.setCellRenderer(new FileRenderer());
+		    jFileList.getSelectionModel().setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+		    jFileList.setDropMode(DropMode.INSERT);
+		    jFileList.setDragEnabled(true);
+		    jFileList.setBackground(Color.WHITE);
+		    jFileList.setSelectionBackground(new Color(200, 200, 255));
+		    jFileList.addListSelectionListener(getItemSelectionListener(fileListModel));
+			jFileList.setModel(fileListModel);
 		}
-		return jList0;
+		return jFileList;
 	}
 
 	private ItemSelectionListener getItemSelectionListener(DefaultListModel fileListModel) {
@@ -203,14 +293,14 @@ public class mainPanel extends JFrame {
 		return itemSelectionListener;
 	}
 
-	private JPanel getJPanel3() {
-		if (jPanel3 == null) {
-			jPanel3 = new JPanel();
-			jPanel3.setPreferredSize(new Dimension(100, 30));
-			jPanel3.setLayout(new BoxLayout(jPanel3, BoxLayout.X_AXIS));
-			jPanel3.add(getJButton0());
+	private JPanel getJListButtonPanel() {
+		if (jListButtonPanel == null) {
+			jListButtonPanel = new JPanel();
+			jListButtonPanel.setPreferredSize(new Dimension(100, 30));
+			jListButtonPanel.setLayout(new BoxLayout(jListButtonPanel, BoxLayout.X_AXIS));
+			jListButtonPanel.add(getJButton0());
 		}
-		return jPanel3;
+		return jListButtonPanel;
 	}
 
 	private JButton getJButton0() {
@@ -221,14 +311,14 @@ public class mainPanel extends JFrame {
 		return jButton0;
 	}
 
-	private JPanel getJPanel1() {
-		if (jPanel1 == null) {
-			jPanel1 = new JPanel();
-			jPanel1.setLayout(new BorderLayout());
-			jPanel1.add(getJPanel3(), BorderLayout.SOUTH);
-			jPanel1.add(getJScrollPane0(), BorderLayout.CENTER);
+	private JPanel getJPanelList() {
+		if (jPanelList == null) {
+			jPanelList = new JPanel();
+			jPanelList.setLayout(new BorderLayout());
+			jPanelList.add(getJListButtonPanel(), BorderLayout.SOUTH);
+			jPanelList.add(getJScrollPaneFileList(), BorderLayout.CENTER);
 		}
-		return jPanel1;
+		return jPanelList;
 	}
 
 	private JSplitPane getJSplitPane0() {
@@ -236,7 +326,7 @@ public class mainPanel extends JFrame {
 			jSplitPane0 = new JSplitPane();
 			jSplitPane0.setDividerLocation(300);
 			jSplitPane0.setDividerSize(5);
-			jSplitPane0.setLeftComponent(getJPanel1());
+			jSplitPane0.setLeftComponent(getJPanelList());
 			jSplitPane0.setRightComponent(getJPanelTagEdit());
 		}
 		return jSplitPane0;
@@ -259,7 +349,7 @@ public class mainPanel extends JFrame {
 			jButtonSave.addActionListener(new ActionListener() {
 				@Override
 				public void actionPerformed(ActionEvent e) {
-					ListItem item = (ListItem)jList0.getSelectedValue();
+					ListItem item = (ListItem)jFileList.getSelectedValue();
 					commit(item);
 					
 					save();
@@ -271,7 +361,7 @@ public class mainPanel extends JFrame {
 
 
 	protected void save() {
-		DefaultListModel model = (DefaultListModel)jList0.getModel();
+		DefaultListModel model = (DefaultListModel)jFileList.getModel();
 		for (Object obj : model.toArray()) {
 			ListItem item = (ListItem)obj;
 			item.save();

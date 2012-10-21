@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.jaudiotagger.audio.AudioFile;
 import org.jaudiotagger.audio.AudioFileIO;
@@ -87,6 +89,17 @@ public class ListItem {
 		} catch (CannotWriteException e) {
 			e.printStackTrace();
 		}
+	}
+
+	public String getUrl() {
+		String url = "http://www.nicovideo.jp/watch/";
+		Pattern p = Pattern.compile("(sm\\d*).*");
+		Matcher m = p.matcher(file.getName());
+		while (m.find()) {
+			String id = m.group(1);
+			url += id;
+		}
+		return url;
 	}
 
 
