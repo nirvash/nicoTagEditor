@@ -3,19 +3,15 @@ package com.github.nirvash.nicoTagEditor;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Container;
+import java.awt.Desktop;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.FileWriter;
-import java.io.IOException;
-import java.io.StringWriter;
-import java.net.URI;
-import java.net.URISyntaxException;
+import java.net.URL;
 
 import javax.swing.BoxLayout;
 import javax.swing.DefaultListModel;
@@ -33,6 +29,9 @@ import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
+import javax.swing.event.HyperlinkEvent;
+import javax.swing.event.HyperlinkEvent.EventType;
+import javax.swing.event.HyperlinkListener;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -48,29 +47,8 @@ public class mainPanel extends JFrame {
 	public class ViewUpdateListener implements viewUpdateListener {
 		@Override
 		public void updateView(ListItem item) {
-			getJTextFieldAlbum().setText(item.getAlbum());
-			getJTextFieldTitle().setText(item.getTitle());
-			getJTextFieldArtist().setText(item.getArtist());
-			String url = item.getUrl();
-			if (url != null) {
-				try {
-					Document document = Jsoup.connect(url).get();
-					/*
-					File f = new File("tmp.txt");
-					FileWriter w = new FileWriter(f);
-					w.write(document.outerHtml());
-					w.flush(); w.close();
-					*/
-					
-					Elements descs = document.select("p[itemprop*=description");
-					Element desc = descs.first();
-					String body = desc.html();
-					getJEditorPane().setContentType("text/html");
-					getJEditorPane().setText(body);
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-			}
+			updateTagItems(item);
+			updateHtmlView(item, false);
 		}
 
 		@Override
@@ -83,11 +61,11 @@ public class mainPanel extends JFrame {
 	private static final long serialVersionUID = 1L;
 	private JPanel jPanelTop;
 	private JButton jButtonSave;
-
+	private JButton jButtonSetTag;
 	
 	private JSplitPane jSplitPane0;
 	private JPanel jPanelList;
-	private JButton jButton0;
+	private JButton jButtonClear;
 	private JPanel jListButtonPanel;
 	private JList jFileList;
 	private JScrollPane jScrollPaneFileList;	
@@ -101,6 +79,8 @@ public class mainPanel extends JFrame {
 	private JTextField jTextFieldAlbum;
 	private JTextField jTextFieldTitle;
 	private JTextField jTextFieldArtist;
+	private JButton jButtonGetHtml;
+	private JButton jButtonSwapAlbumArtist;
 	
 	private JScrollPane jScrollPaneHtml;
 	private JEditorPane jEditorPane;
@@ -116,14 +96,28 @@ public class mainPanel extends JFrame {
 	private void initComponents() {
 		add(getJPanelTop(), BorderLayout.NORTH);
 		add(getJSplitPane0(), BorderLayout.CENTER);
-		setSize(750, 272);
+		setSize(750, 672);
 	}
 	
 	private JEditorPane getJEditorPane() {
 		if (jEditorPane == null) {
 			jEditorPane = new JEditorPane();
 			jEditorPane.setEditable(false);
-//			jEditorPane.setPreferredSize(new Dimension(400, 100));
+			jEditorPane.addHyperlinkListener(new HyperlinkListener() {
+				@Override
+				public void hyperlinkUpdate(HyperlinkEvent e) {
+					if (e.getEventType() == EventType.ACTIVATED) {	// If clicked
+						URL url = e.getURL();
+						// Launch default browser
+						Desktop dp = Desktop.getDesktop();
+						try {
+							dp.browse(url.toURI());
+						} catch (Exception ex) {
+							ex.printStackTrace();
+						}
+					}
+				}
+			});
 		}
 		return jEditorPane;
 	}
@@ -188,6 +182,7 @@ public class mainPanel extends JFrame {
 				public void actionPerformed(ActionEvent e) {
 					ListItem listItem = (ListItem)jFileList.getSelectedValue();
 					listItem.setArtist(jTextFieldArtist.getText());
+					
 				}
 			});
 		}
@@ -218,6 +213,40 @@ public class mainPanel extends JFrame {
 		}
 		return jLabelArtist;
 	}
+	
+	private JButton getJButtonGetHtml() {
+		if (jButtonGetHtml == null) {
+			jButtonGetHtml = new JButton();
+			jButtonGetHtml.setText("Get Description");
+			jButtonGetHtml.addActionListener(new ActionListener() {
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					ListItem listItem = (ListItem)jFileList.getSelectedValue();
+					updateHtmlView(listItem, true);
+				}
+			});
+		}
+		return jButtonGetHtml;
+	}
+	
+	private JButton getJButtonSwapAlbumArtist() {
+		if (jButtonSwapAlbumArtist == null) {
+			jButtonSwapAlbumArtist = new JButton();
+			jButtonSwapAlbumArtist.setText("Swap album and artist");
+			jButtonSwapAlbumArtist.addActionListener(new ActionListener() {
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					ListItem listItem = (ListItem)jFileList.getSelectedValue();
+					String artist = listItem.getAlbum();
+					String album = listItem.getArtist();
+					listItem.setArtist(artist);
+					listItem.setAlbum(album);
+					updateTagItems(listItem);
+				}
+			});
+		}
+		return jButtonSwapAlbumArtist;
+	}
 
 	private JPanel getJPanelTagEdit() {
 		if (jPanelTagEdit == null) {
@@ -241,6 +270,10 @@ public class mainPanel extends JFrame {
 									.addComponent(getJTextFieldArtist())
 									)
 							)
+					.addGroup(layout.createSequentialGroup()
+							.addComponent(getJButtonGetHtml())
+							.addComponent(getJButtonSwapAlbumArtist())
+							)
 					.addComponent(getJScrollPaneHtml())
 				);
 			
@@ -254,6 +287,9 @@ public class mainPanel extends JFrame {
 					.addGroup(layout.createParallelGroup(GroupLayout.Alignment.BASELINE)
 							.addComponent(getJLabelArtist())
 							.addComponent(getJTextFieldArtist()))
+					.addGroup(layout.createParallelGroup(GroupLayout.Alignment.BASELINE)
+							.addComponent(getJButtonGetHtml())
+							.addComponent(getJButtonSwapAlbumArtist()))
 					.addComponent(getJScrollPaneHtml())
 				);
 		}
@@ -298,17 +334,24 @@ public class mainPanel extends JFrame {
 			jListButtonPanel = new JPanel();
 			jListButtonPanel.setPreferredSize(new Dimension(100, 30));
 			jListButtonPanel.setLayout(new BoxLayout(jListButtonPanel, BoxLayout.X_AXIS));
-			jListButtonPanel.add(getJButton0());
+			jListButtonPanel.add(getJButtonClear());
 		}
 		return jListButtonPanel;
 	}
 
-	private JButton getJButton0() {
-		if (jButton0 == null) {
-			jButton0 = new JButton();
-			jButton0.setText("jButton0");
+	private JButton getJButtonClear() {
+		if (jButtonClear == null) {
+			jButtonClear = new JButton();
+			jButtonClear.setText("Clear");
+			jButtonClear.addActionListener(new ActionListener() {
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					DefaultListModel model = (DefaultListModel)jFileList.getModel();
+					model.clear();
+				}
+			});
 		}
-		return jButton0;
+		return jButtonClear;
 	}
 
 	private JPanel getJPanelList() {
@@ -338,6 +381,7 @@ public class mainPanel extends JFrame {
 			jPanelTop.setPreferredSize(new Dimension(100, 30));
 			jPanelTop.setLayout(new BoxLayout(jPanelTop, BoxLayout.X_AXIS));
 			jPanelTop.add(getJButtonSave());
+			jPanelTop.add(getJButtonSetTag());
 		}
 		return jPanelTop;
 	}
@@ -351,18 +395,37 @@ public class mainPanel extends JFrame {
 				public void actionPerformed(ActionEvent e) {
 					ListItem item = (ListItem)jFileList.getSelectedValue();
 					commit(item);
-					
 					save();
 				}
 			});
 		}
 		return jButtonSave;
 	}
+	
+	private JButton getJButtonSetTag() {
+		if (jButtonSetTag == null) {
+			jButtonSetTag = new JButton();
+			jButtonSetTag.setText("Set Tag");
+			jButtonSetTag.addActionListener(new ActionListener() {
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					Object[] items = jFileList.getSelectedValues();
+					for (Object item : items) {
+						ListItem listItem = (ListItem)item;
+						listItem.analyzeTag();
+					}
+					ListItem current = (ListItem)jFileList.getSelectedValue();
+					updateTagItems(current);
+				}
+			});
+		}
+		return jButtonSetTag;
+	}
 
 
 	protected void save() {
-		DefaultListModel model = (DefaultListModel)jFileList.getModel();
-		for (Object obj : model.toArray()) {
+		Object[] items = jFileList.getSelectedValues();
+		for (Object obj : items) {
 			ListItem item = (ListItem)obj;
 			item.save();
 		}
@@ -373,6 +436,58 @@ public class mainPanel extends JFrame {
 			item.setAlbum(getJTextFieldAlbum().getText());
 			item.setTitle(getJTextFieldTitle().getText());
 			item.setArtist(getJTextFieldArtist().getText());
+			jFileList.invalidate();
+		}
+	}
+
+	private void updateTagItems(ListItem item) {
+		getJTextFieldAlbum().setText(item.getAlbum());
+		getJTextFieldTitle().setText(item.getTitle());
+		getJTextFieldArtist().setText(item.getArtist());
+	}
+
+	private void updateHtmlView(ListItem item, boolean isConnect) {
+		String url = item.getUrl();
+		if (url != null) {
+			try {
+				String filename = item.getFile().getName();
+				filename = filename.replaceAll("(sm|nm, replacement)\\d*_", "");
+				String body = String.format("%s<br><a href=\"%s\">%s</a><br>", filename, url, url);
+				if (isConnect) {
+					Document document = Jsoup.connect(url).get();
+					
+					File f = new File("tmp.txt");
+					FileWriter w = new FileWriter(f);
+					w.write(document.outerHtml());
+					w.flush(); w.close();
+					
+					Elements users = document.select("strong[itemprop*=name]");
+					Element user = users.first();
+					if (user != null) {
+						String userName = user.html();
+						if (userName.length()>0) {
+							body += userName + "<br>";
+							if (item.getAlbum().length()==0) {
+								item.setAlbum(userName);
+								jTextFieldAlbum.setText(userName);
+							}
+						}
+					}
+					
+					Elements descs = document.select("p[itemprop*=description]");
+					Element desc = descs.first();
+					if (desc != null) {
+						body += desc.html();
+					} else {
+						desc = document.body();
+						body += desc.html();
+					}
+				}
+				getJEditorPane().setContentType("text/html");
+				getJEditorPane().setText(body);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
 	}
 

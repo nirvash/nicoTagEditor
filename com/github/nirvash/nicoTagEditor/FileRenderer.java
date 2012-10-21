@@ -18,13 +18,13 @@ import javax.swing.filechooser.FileSystemView;
 public class FileRenderer extends JPanel implements ListCellRenderer {
 	private static final long serialVersionUID = 1L;	
 	private JLabel label = new JLabel();
-//	private JCheckBox checkbox =  new JCheckBox();
+	private JCheckBox checkbox =  new JCheckBox();
 	
 	protected static Border noFocusBorder = new EmptyBorder(1, 1, 1, 1);
 	
 	public FileRenderer() {
 		setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
-//		add(checkbox);
+		add(checkbox);
 		add(label);
 	}
 	
@@ -59,7 +59,7 @@ public class FileRenderer extends JPanel implements ListCellRenderer {
 			setForeground(list.getForeground());
 		}
 		
-//		checkbox.setSelected(item.isSelected());
+		checkbox.setSelected(item.isModified());
 		
 		setEnabled(list.isEnabled());
 //		checkbox.setEnabled(item.enableSelect());

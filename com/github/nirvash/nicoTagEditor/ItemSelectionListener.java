@@ -31,7 +31,7 @@ public class ItemSelectionListener implements ListSelectionListener {
 		updateTagEditPanel(index);
 		
 	}
-
+	
 	private void updateOldIndex() {
 		if (oldItem == null) {
 			return;
