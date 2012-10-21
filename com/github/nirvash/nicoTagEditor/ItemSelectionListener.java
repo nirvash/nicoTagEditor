@@ -8,11 +8,17 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
 public class ItemSelectionListener implements ListSelectionListener {
-	private JPanel parent;
+	private viewUpdateListener listener;
 	private DefaultListModel model = null;
-
-	public ItemSelectionListener(JPanel panel, DefaultListModel fileListModel) {
-		parent = panel;
+	private ListItem oldItem = null;
+	
+	public interface viewUpdateListener {
+		void updateView(ListItem item);
+		void commit(ListItem listItem);
+	}
+	
+	public ItemSelectionListener(viewUpdateListener listner, DefaultListModel fileListModel) {
+		this.listener = listner;
 		model = fileListModel;
 	}
 
@@ -21,14 +27,26 @@ public class ItemSelectionListener implements ListSelectionListener {
 		if (e.getValueIsAdjusting()) return;
 		int index = ((JList)e.getSource()).getSelectedIndex();
 		
-		updatePreviewImage(index);
+		updateOldIndex();
+		updateTagEditPanel(index);
+		
 	}
 
-	public void updatePreviewImage(int index) {
+	private void updateOldIndex() {
+		if (oldItem == null) {
+			return;
+		}
+		
+		listener.commit(oldItem);	
+	}
+
+	public void updateTagEditPanel(int index) {
 		if (index < 0) {
 			return;
 		}
 		
 		ListItem listItem = (ListItem)model.get(index);
+		listener.updateView(listItem);
+		oldItem = listItem;
 	}
 }

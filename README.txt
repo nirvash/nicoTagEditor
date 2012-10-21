@@ -1,4 +1,4 @@
 
 
 ## Libraries
- * http://javamusictag.sourceforge.net/index.html
+ * http://www.jthink.net/jaudiotagger/index.jsp
