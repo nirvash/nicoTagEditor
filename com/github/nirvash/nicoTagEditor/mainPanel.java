@@ -9,10 +9,12 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileWriter;
 import java.net.URL;
 
+import javax.imageio.ImageIO;
 import javax.swing.BoxLayout;
 import javax.swing.DefaultListModel;
 import javax.swing.DropMode;
@@ -449,40 +451,50 @@ public class mainPanel extends JFrame {
 	}
 
 	private void updateHtmlView(ListItem item, boolean isConnect) {
-		String url = item.getUrl();
-		if (url != null) {
+		String id = item.getId();
+		String urlHtml = "http://www.nicovideo.jp/watch/" +id;
+		if (id != null) {
 			try {
 				String filename = item.getFile().getName();
 				filename = filename.replaceAll("(sm|nm, replacement)\\d*_", "");
-				String body = String.format("%s<br><a href=\"%s\">%s</a><br>", filename, url, url);
+				String body = String.format("%s<br><a href=\"%s\">%s</a><br>", filename, urlHtml, urlHtml);
 				if (isConnect) {
-					Document document = Jsoup.connect(url).get();
+					String urlXml = "http://ext.nicovideo.jp/api/getthumbinfo/" + id;
+					String urlThumb = "http://ext.nicovideo.jp/thumb/" + id;
+					String thumb = "";
 					
+					Document document = Jsoup.connect(urlXml).get();
+					Elements elems = document.select("thumbnail_url");
+					if (!elems.isEmpty()) {
+						String image_url = elems.first().text();
+						thumb = String.format("<img src=\"%s\">", elems.first().text());
+						item.setArtwork(image_url);
+					}
+					document = Jsoup.connect(urlHtml).get();
+/*					
 					File f = new File("tmp.txt");
 					FileWriter w = new FileWriter(f);
 					w.write(document.outerHtml());
 					w.flush(); w.close();
-					
-					Elements users = document.select("strong[itemprop*=name]");
-					Element user = users.first();
-					if (user != null) {
-						String userName = user.html();
-						if (userName.length()>0) {
-							body += userName + "<br>";
-							if (item.getAlbum().length()==0) {
-								item.setAlbum(userName);
-								jTextFieldAlbum.setText(userName);
-							}
+*/
+					String userName = getUserNmaeFromHtml(document);
+					if (userName != null && userName.length()>0) {
+						body += userName + "<br>";
+						if (item.getAlbum().length()==0) {
+							item.setAlbum(userName);
+							jTextFieldAlbum.setText(userName);
 						}
 					}
 					
-					Elements descs = document.select("p[itemprop*=description]");
-					Element desc = descs.first();
-					if (desc != null) {
-						body += desc.html();
+					body += thumb + "<br>";
+					
+					String description = getDescriptionFromHtml(document);
+//					String description = getDescriptionFromXML(document);
+					if (description != null) {
+						body += description;
 					} else {
-						desc = document.body();
-						body += desc.html();
+						description = document.body().html();
+						body += description;
 					}
 				}
 				getJEditorPane().setContentType("text/html");
@@ -491,6 +503,31 @@ public class mainPanel extends JFrame {
 				e.printStackTrace();
 			}
 		}
+	}
+
+	private String getDescriptionFromXML(Document document) {
+		Elements descs = document.select("description");
+		Element desc = descs.first();
+		if (desc != null) {
+			return desc.html();
+		}
+		return null;
+	}
+
+	private String getUserNmaeFromHtml(Document document) {
+		Elements users = document.select("strong[itemprop*=name]");
+		Element user = users.first();
+		if (user != null) {
+			return user.html();
+		}
+		return null;
+	}
+
+	private String getDescriptionFromHtml(Document document) {
+		Elements descs = document.select("p[itemprop*=description]");
+		Element desc = descs.first();	
+		if (desc == null) return null;
+		return desc.html();
 	}
 
 	@SuppressWarnings("unused")

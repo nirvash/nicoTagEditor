@@ -1,9 +1,14 @@
 package com.github.nirvash.nicoTagEditor;
 
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import javax.imageio.ImageIO;
 
 import org.jaudiotagger.audio.AudioFileIO;
 import org.jaudiotagger.audio.exceptions.CannotWriteException;
@@ -12,9 +17,10 @@ import org.jaudiotagger.tag.FieldDataInvalidException;
 import org.jaudiotagger.tag.FieldKey;
 import org.jaudiotagger.tag.KeyNotFoundException;
 import org.jaudiotagger.tag.Tag;
-import org.jaudiotagger.tag.id3.AbstractID3v2Tag;
 import org.jaudiotagger.tag.id3.ID3v23Tag;
 import org.jaudiotagger.tag.id3.ID3v24Tag;
+import org.jaudiotagger.tag.images.Artwork;
+import org.jaudiotagger.tag.images.ArtworkFactory;
 
 public class ListItem {
 	private File file;
@@ -93,6 +99,28 @@ public class ListItem {
 		}
 	}
 	
+	public void setArtwork(String url) {
+		Artwork artwork;
+		try {
+			BufferedImage image = ImageIO.read(new URL(url));
+			if (image != null) {
+				artwork = ArtworkFactory.getNew();
+				ByteArrayOutputStream baos = new ByteArrayOutputStream();
+				ImageIO.write(image, "jpeg", baos);
+				byte[] bytesOut = baos.toByteArray();
+				artwork.setBinaryData(bytesOut);
+				tag.deleteArtworkField();
+				tag.setField(artwork);
+				isDirty = true;
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (FieldDataInvalidException e) {
+			e.printStackTrace();
+		}
+	}
+
+	
 	public void save() {
 		if (isDirty) {
 			try {
@@ -104,15 +132,14 @@ public class ListItem {
 		}
 	}
 
-	public String getUrl() {
-		String url = "http://www.nicovideo.jp/watch/";
+	public String getId() {
+		String id = "";
 		Pattern p = Pattern.compile("((sm|nm)\\d*).*");
 		Matcher m = p.matcher(file.getName());
 		if (m.find()) {
-			String id = m.group(1);
-			url += id;
+			id = m.group(1);
 		}
-		return url;
+		return id;
 	}
 	
 	private class NicoPattern {
@@ -215,6 +242,7 @@ public class ListItem {
 		artist = replaceAll(artist, "power", "");
 		artist = replaceAll(artist, "solid", "");
 		artist = replaceAll(artist, "soft", "");
+		artist = replaceAll(artist, "‹©‚Ñ‰¹Œ¹", "");
 		return artist;
 	}
 	
@@ -240,7 +268,5 @@ public class ListItem {
 	public boolean isModified() {
 		return this.isDirty;
 	}
-
-
 
 }
