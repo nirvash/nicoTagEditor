@@ -104,11 +104,14 @@ public class ListItem {
 		try {
 			BufferedImage image = ImageIO.read(new URL(url));
 			if (image != null) {
+				int FRONT_COVER = 3; // http://www.sno.phy.queensu.ca/~phil/exiftool/TagNames/ID3.html#PictureType
 				artwork = ArtworkFactory.getNew();
 				ByteArrayOutputStream baos = new ByteArrayOutputStream();
 				ImageIO.write(image, "jpeg", baos);
 				byte[] bytesOut = baos.toByteArray();
 				artwork.setBinaryData(bytesOut);
+				artwork.setPictureType(FRONT_COVER);
+				artwork.setMimeType("image/jpeg");
 				tag.deleteArtworkField();
 				tag.setField(artwork);
 				isDirty = true;
