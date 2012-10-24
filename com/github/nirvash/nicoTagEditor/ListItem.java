@@ -26,6 +26,7 @@ public class ListItem {
 	private File file;
 	MP3File mp3file;
 	ID3v23Tag tag;
+	String description = "";
 	boolean isDirty = false;
 	
 	public ListItem(File file) throws IOException {
@@ -66,6 +67,18 @@ public class ListItem {
 	private String convert(String in) {
 		return in;
 	}
+	
+	public void setDescription(String description) {
+		this.description = description;
+	}
+	
+	public String getDescription() {
+		return description;
+	}
+	
+	public boolean hasDescritpion() {
+		return (!(description == null || description.length() == 0));
+	}
 
 	private void setMetadata(FieldKey key, String value) {
 		try {
@@ -100,6 +113,8 @@ public class ListItem {
 	}
 	
 	public void setArtwork(String url) {
+		if (tag.getArtworkList().size() > 0) return;
+		
 		Artwork artwork;
 		try {
 			BufferedImage image = ImageIO.read(new URL(url));
@@ -164,9 +179,9 @@ public class ListItem {
 	
 	public void analyzeTag() {
 		patterns = new NicoPattern[] {
-				new NicoPattern(".*【(.*)】[\\s　「]*(.*?)[\\s　」]*【.*】.*mp3", 1, 2),
-				new NicoPattern(".*【(.*)】[\\s　「]*(.*?)[\\s　」（]+.*", 1, 2),
-				new NicoPattern(".*?_(.*)「(.*)」.*", 1, 2),
+				new NicoPattern(".*【(.*)】[\\s　「『]*(.*?)[\\s　」』]*【.*】.*mp3", 1, 2),
+				new NicoPattern(".*【(.*)】[\\s　「『]*(.*?)[\\s　」』（]+.*", 1, 2),
+				new NicoPattern(".*?_(.*)[「『][\\s　]*(.*?)[\\s　]*[」』].*", 1, 2),
 				new NicoPattern(".*?\\[(.*?)\\][\\s　]*(.*?)[\\s　]*\\[.*\\]", 1, 2),
 				new NicoPattern(".*_(.*?)[\\s　]*【(.*)】.*", 2, 1)
 		};
@@ -245,6 +260,7 @@ public class ListItem {
 		artist = replaceAll(artist, "power", "");
 		artist = replaceAll(artist, "solid", "");
 		artist = replaceAll(artist, "soft", "");
+		artist = replaceAll(artist, "dark", "");
 		artist = replaceAll(artist, "叫び音源", "");
 		return artist;
 	}

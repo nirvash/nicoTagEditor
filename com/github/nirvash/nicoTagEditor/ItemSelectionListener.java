@@ -9,7 +9,7 @@ import javax.swing.event.ListSelectionListener;
 
 public class ItemSelectionListener implements ListSelectionListener {
 	private viewUpdateListener listener;
-	private DefaultListModel model = null;
+	private MusicListModel model = null;
 	private ListItem oldItem = null;
 	
 	public interface viewUpdateListener {
@@ -17,7 +17,7 @@ public class ItemSelectionListener implements ListSelectionListener {
 		void commit(ListItem listItem);
 	}
 	
-	public ItemSelectionListener(viewUpdateListener listner, DefaultListModel fileListModel) {
+	public ItemSelectionListener(viewUpdateListener listner, MusicListModel fileListModel) {
 		this.listener = listner;
 		model = fileListModel;
 	}
@@ -29,7 +29,7 @@ public class ItemSelectionListener implements ListSelectionListener {
 		
 		updateOldIndex();
 		updateTagEditPanel(index);
-		
+		model.updateItem(index, index);
 	}
 	
 	private void updateOldIndex() {

@@ -9,6 +9,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.awt.event.InputMethodEvent;
+import java.awt.event.InputMethodListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileWriter;
@@ -31,6 +33,8 @@ import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.event.HyperlinkEvent;
 import javax.swing.event.HyperlinkEvent.EventType;
 import javax.swing.event.HyperlinkListener;
@@ -49,8 +53,10 @@ public class mainPanel extends JFrame {
 	public class ViewUpdateListener implements viewUpdateListener {
 		@Override
 		public void updateView(ListItem item) {
+			isUpdatingView = true;
 			updateTagItems(item);
-			updateHtmlView(item, false);
+			isUpdatingView = false;
+			updateHtmlView(item, true);
 		}
 
 		@Override
@@ -60,6 +66,7 @@ public class mainPanel extends JFrame {
 
 	}
 
+	private boolean isUpdatingView = false;
 	private static final long serialVersionUID = 1L;
 	private JPanel jPanelTop;
 	private JButton jButtonSave;
@@ -70,6 +77,7 @@ public class mainPanel extends JFrame {
 	private JButton jButtonClear;
 	private JPanel jListButtonPanel;
 	private JList jFileList;
+	private MusicListModel musicModel;
 	private JScrollPane jScrollPaneFileList;	
 	private ItemSelectionListener itemSelectionListener;
 
@@ -147,12 +155,31 @@ public class mainPanel extends JFrame {
 			jTextFieldAlbum = new JTextField();
 			jTextFieldAlbum.setText("");
 			jTextFieldAlbum.setAutoscrolls(true);
-			jTextFieldAlbum.addActionListener(new ActionListener() {
+			javax.swing.text.Document doc = jTextFieldAlbum.getDocument();
+			doc.addDocumentListener(new DocumentListener() {
 				@Override
-				public void actionPerformed(ActionEvent e) {
+				public void changedUpdate(DocumentEvent arg0) {
+					update();
+				}
+
+				@Override
+				public void insertUpdate(DocumentEvent arg0) {
+					update();
+				}
+
+				@Override
+				public void removeUpdate(DocumentEvent arg0) {
+					update();
+				}
+				
+				private void update() {
+					if (isUpdatingView) return;
 					ListItem listItem = (ListItem)jFileList.getSelectedValue();
 					listItem.setAlbum(jTextFieldAlbum.getText());
+					int index = jFileList.getSelectedIndex();
+					musicModel.updateItem(index, index);
 				}
+				
 			});
 		}
 		return jTextFieldAlbum;
@@ -163,12 +190,31 @@ public class mainPanel extends JFrame {
 			jTextFieldTitle = new JTextField();
 			jTextFieldTitle.setText("");
 			jTextFieldTitle.setAutoscrolls(true);
-			jTextFieldTitle.addActionListener(new ActionListener() {
+			javax.swing.text.Document doc = jTextFieldTitle.getDocument();
+			doc.addDocumentListener(new DocumentListener() {
 				@Override
-				public void actionPerformed(ActionEvent e) {
+				public void changedUpdate(DocumentEvent arg0) {
+					update();
+				}
+
+				@Override
+				public void insertUpdate(DocumentEvent arg0) {
+					update();
+				}
+
+				@Override
+				public void removeUpdate(DocumentEvent arg0) {
+					update();
+				}
+				
+				private void update() {
+					if (isUpdatingView) return;
 					ListItem listItem = (ListItem)jFileList.getSelectedValue();
 					listItem.setTitle(jTextFieldTitle.getText());
+					int index = jFileList.getSelectedIndex();
+					musicModel.updateItem(index, index);
 				}
+				
 			});
 		}
 		return jTextFieldTitle;
@@ -179,13 +225,31 @@ public class mainPanel extends JFrame {
 			jTextFieldArtist = new JTextField();
 			jTextFieldArtist.setText("");
 			jTextFieldArtist.setAutoscrolls(true);
-			jTextFieldArtist.addActionListener(new ActionListener() {
+			javax.swing.text.Document doc = jTextFieldArtist.getDocument();
+			doc.addDocumentListener(new DocumentListener() {
 				@Override
-				public void actionPerformed(ActionEvent e) {
+				public void changedUpdate(DocumentEvent arg0) {
+					update();
+				}
+
+				@Override
+				public void insertUpdate(DocumentEvent arg0) {
+					update();
+				}
+
+				@Override
+				public void removeUpdate(DocumentEvent arg0) {
+					update();
+				}
+				
+				private void update() {
+					if (isUpdatingView) return;
 					ListItem listItem = (ListItem)jFileList.getSelectedValue();
 					listItem.setArtist(jTextFieldArtist.getText());
-					
+					int index = jFileList.getSelectedIndex();
+					musicModel.updateItem(index, index);
 				}
+				
 			});
 		}
 		return jTextFieldArtist;
@@ -309,22 +373,22 @@ public class mainPanel extends JFrame {
 	private JList getJFileList() {
 		if (jFileList == null) {
 			jFileList = new JList();
-			DefaultListModel fileListModel = new DefaultListModel();
-			jFileList = new JList(fileListModel);
-		    jFileList.setTransferHandler(new FileDropHandler(fileListModel));
+			musicModel = new MusicListModel();
+			jFileList = new JList(musicModel);
+		    jFileList.setTransferHandler(new FileDropHandler(musicModel));
 		    jFileList.setCellRenderer(new FileRenderer());
 		    jFileList.getSelectionModel().setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
 		    jFileList.setDropMode(DropMode.INSERT);
 		    jFileList.setDragEnabled(true);
 		    jFileList.setBackground(Color.WHITE);
 		    jFileList.setSelectionBackground(new Color(200, 200, 255));
-		    jFileList.addListSelectionListener(getItemSelectionListener(fileListModel));
-			jFileList.setModel(fileListModel);
+		    jFileList.addListSelectionListener(getItemSelectionListener(musicModel));
+			jFileList.setModel(musicModel);
 		}
 		return jFileList;
 	}
 
-	private ItemSelectionListener getItemSelectionListener(DefaultListModel fileListModel) {
+	private ItemSelectionListener getItemSelectionListener(MusicListModel fileListModel) {
 		if (itemSelectionListener == null) {
 			itemSelectionListener = new ItemSelectionListener(new ViewUpdateListener(), fileListModel);
 		}
@@ -420,6 +484,10 @@ public class mainPanel extends JFrame {
 					if (current != null) {
 						updateTagItems(current);
 					}
+					int[] indicies = jFileList.getSelectedIndices();
+					int begin = indicies[0];
+					int end = indicies[indicies.length-1];
+					musicModel.updateItem(begin, end);
 				}
 			});
 		}
@@ -433,6 +501,12 @@ public class mainPanel extends JFrame {
 			ListItem item = (ListItem)obj;
 			item.save();
 		}
+		
+		int[] indicies = jFileList.getSelectedIndices();
+		int begin = indicies[0];
+		int end = indicies[indicies.length-1];
+		musicModel.updateItem(begin, end);
+
 	}
 
 	private void commit(ListItem item) {
@@ -451,58 +525,66 @@ public class mainPanel extends JFrame {
 	}
 
 	private void updateHtmlView(ListItem item, boolean isConnect) {
-		String id = item.getId();
-		String urlHtml = "http://www.nicovideo.jp/watch/" +id;
-		if (id != null) {
-			try {
-				String filename = item.getFile().getName();
-				filename = filename.replaceAll("(sm|nm, replacement)\\d*_", "");
-				String body = String.format("%s<br><a href=\"%s\">%s</a><br>", filename, urlHtml, urlHtml);
-				if (isConnect) {
-					String urlXml = "http://ext.nicovideo.jp/api/getthumbinfo/" + id;
-					String urlThumb = "http://ext.nicovideo.jp/thumb/" + id;
-					String thumb = "";
-					
-					Document document = Jsoup.connect(urlXml).get();
-					Elements elems = document.select("thumbnail_url");
-					if (!elems.isEmpty()) {
-						String image_url = elems.first().text();
-						thumb = String.format("<img src=\"%s\">", elems.first().text());
-						item.setArtwork(image_url);
-					}
-					document = Jsoup.connect(urlHtml).get();
-/*					
-					File f = new File("tmp.txt");
-					FileWriter w = new FileWriter(f);
-					w.write(document.outerHtml());
-					w.flush(); w.close();
-*/
-					String userName = getUserNmaeFromHtml(document);
-					if (userName != null && userName.length()>0) {
-						body += userName + "<br>";
-						if (item.getAlbum().length()==0) {
-							item.setAlbum(userName);
-							jTextFieldAlbum.setText(userName);
+		String description = "";
+		if (item.hasDescritpion()) {
+			description = item.getDescription();
+		} else {
+			String id = item.getId();
+			String urlHtml = "http://www.nicovideo.jp/watch/" +id;
+			if (id != null) {
+				try {
+					String filename = item.getFile().getName();
+					filename = filename.replaceAll("(sm|nm, replacement)\\d*_", "");
+					description = String.format("%s<br><a href=\"%s\">%s</a><br>", filename, urlHtml, urlHtml);
+					if (isConnect) {
+						String urlXml = "http://ext.nicovideo.jp/api/getthumbinfo/" + id;
+						String urlThumb = "http://ext.nicovideo.jp/thumb/" + id;
+						String thumb = "";
+						
+						Document document = Jsoup.connect(urlXml).get();
+						Elements elems = document.select("thumbnail_url");
+						if (!elems.isEmpty()) {
+							String image_url = elems.first().text();
+							thumb = String.format("<img src=\"%s\">", elems.first().text());
+							item.setArtwork(image_url);
+						}
+						document = Jsoup.connect(urlHtml).get();
+	/*					
+						File f = new File("tmp.txt");
+						FileWriter w = new FileWriter(f);
+						w.write(document.outerHtml());
+						w.flush(); w.close();
+	*/
+						String userName = getUserNmaeFromHtml(document);
+						if (userName != null && userName.length()>0) {
+							description += userName + "<br>";
+							if (item.getAlbum().length()==0) {
+								item.setAlbum(userName);
+								jTextFieldAlbum.setText(userName);
+							}
+						}
+						
+						description += thumb + "<br>";
+						
+						String html = getDescriptionFromHtml(document);
+	//					String html = getDescriptionFromXML(document);
+						if (html != null) {
+							description += html;
+						} else {
+							html = document.body().html();
+							description += html;
 						}
 					}
-					
-					body += thumb + "<br>";
-					
-					String description = getDescriptionFromHtml(document);
-//					String description = getDescriptionFromXML(document);
-					if (description != null) {
-						body += description;
-					} else {
-						description = document.body().html();
-						body += description;
-					}
+					item.setDescription(description);
+				} catch (Exception e) {
+					e.printStackTrace();
 				}
-				getJEditorPane().setContentType("text/html");
-				getJEditorPane().setText(body);
-			} catch (Exception e) {
-				e.printStackTrace();
 			}
 		}
+
+		getJEditorPane().setContentType("text/html");
+		getJEditorPane().setText(description);
+
 	}
 
 	private String getDescriptionFromXML(Document document) {
