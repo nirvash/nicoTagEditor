@@ -152,7 +152,7 @@ public class ListItem {
 
 	public String getId() {
 		String id = "";
-		Pattern p = Pattern.compile("((sm|nm)\\d*).*");
+		Pattern p = Pattern.compile("((sm|nm)*\\d*).*");
 		Matcher m = p.matcher(file.getName());
 		if (m.find()) {
 			id = m.group(1);

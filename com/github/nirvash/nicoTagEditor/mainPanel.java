@@ -56,7 +56,7 @@ public class mainPanel extends JFrame {
 			isUpdatingView = true;
 			updateTagItems(item);
 			isUpdatingView = false;
-			updateHtmlView(item, true);
+			updateHtmlView(item, true, false);
 		}
 
 		@Override
@@ -288,7 +288,7 @@ public class mainPanel extends JFrame {
 				@Override
 				public void actionPerformed(ActionEvent e) {
 					ListItem listItem = (ListItem)jFileList.getSelectedValue();
-					updateHtmlView(listItem, true);
+					updateHtmlView(listItem, true, true);
 				}
 			});
 		}
@@ -524,9 +524,9 @@ public class mainPanel extends JFrame {
 		getJTextFieldArtist().setText(item.getArtist());
 	}
 
-	private void updateHtmlView(ListItem item, boolean isConnect) {
+	private void updateHtmlView(ListItem item, boolean isConnect, boolean forceUpdate) {
 		String description = "";
-		if (item.hasDescritpion()) {
+		if (!forceUpdate && item.hasDescritpion()) {
 			description = item.getDescription();
 		} else {
 			String id = item.getId();
@@ -534,7 +534,7 @@ public class mainPanel extends JFrame {
 			if (id != null) {
 				try {
 					String filename = item.getFile().getName();
-					filename = filename.replaceAll("(sm|nm, replacement)\\d*_", "");
+//					filename = filename.replaceAll("(sm|nm)\\d*_", "");
 					description = String.format("%s<br><a href=\"%s\">%s</a><br>", filename, urlHtml, urlHtml);
 					if (isConnect) {
 						String urlXml = "http://ext.nicovideo.jp/api/getthumbinfo/" + id;
@@ -557,6 +557,7 @@ public class mainPanel extends JFrame {
 	*/
 						String userName = getUserNmaeFromHtml(document);
 						if (userName != null && userName.length()>0) {
+							userName = userName.replaceAll("<.*?>", "");
 							description += userName + "<br>";
 							if (item.getAlbum().length()==0) {
 								item.setAlbum(userName);
